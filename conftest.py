@@ -106,13 +106,31 @@ def page(browser, request):
 def portal_base_url():
     return PORTAL_BASE_URL
 
+# API Testing Fixtures
+@pytest.fixture(scope="function")
+def api_response_context():
+    """Fixture for API test context - used for storing request/response data"""
+    class APIContext:
+        def __init__(self):
+            self.endpoint = None
+            self.credentials = {}
+            self.response = None
+            self.response_time = None
+            self.decoded_token = None
+    
+    return APIContext()
+
 @pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_makereport(item, call):
     """
     Hook to add screenshots to pytest-html report on failures.
+    Also stores test report for trace generation.
     """
     outcome = yield
     report = outcome.get_result()
+    
+    # Store report for access in fixtures
+    setattr(item, f"rep_{report.when}", report)
 
     # We only care about test call phase (not setup/teardown) and failures
     if report.when == "call" and report.failed:

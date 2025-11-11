@@ -9,6 +9,7 @@ A comprehensive test automation framework using **Playwright** with **pytest** a
 ✅ **Automatic Wait Handling** - Built-in waits for reliable tests  
 ✅ **BDD Support** - Write tests in Gherkin (Given/When/Then)  
 ✅ **Traditional pytest** - Also supports standard pytest tests  
+✅ **API Testing** - Comprehensive REST API testing with JWT validation  
 ✅ **Multi-Browser** - Chromium, Firefox, WebKit  
 ✅ **Multi-Platform** - Windows, macOS, Linux  
 ✅ **Parallel Execution** - Run tests concurrently  
@@ -20,11 +21,15 @@ A comprehensive test automation framework using **Playwright** with **pytest** a
 ```
 py-automation-testing/
 ├── features/               # BDD feature files (Gherkin)
-│   └── web/
+│   ├── api/               # API test scenarios
+│   │   └── test.feature
+│   └── web/               # Web UI test scenarios
 │       ├── home_page.feature
 │       └── login.feature
 ├── steps/                 # BDD step definitions
-│   └── web/
+│   ├── api/               # API step definitions
+│   │   └── test_keycloak_steps.py
+│   └── web/               # Web step definitions
 │       ├── test_home_page_steps.py
 │       └── test_login_steps.py
 ├── pages/                 # Page Object Model
@@ -36,13 +41,19 @@ py-automation-testing/
 │       ├── test_sample_homepage.py
 │       └── test_login.py
 ├── config/                # Configuration
-│   └── settings.py
+│   ├── settings.py       # Web test settings
+│   └── api_config.py     # API test configuration
+├── utils/                 # Utility functions
+│   └── api_helper.py     # API testing utilities
+├── examples/              # Example scripts
+│   └── api_usage_example.py
 ├── reports/              # Test reports and screenshots
 │   ├── allure_results/
 │   └── screenshots/
 ├── conftest.py           # Pytest fixtures and hooks
 ├── pytest.ini            # Pytest configuration
 ├── requirements.txt      # Python dependencies
+├── run_api_tests.sh      # API test runner script
 ├── .env                  # Environment variables (not in git)
 └── *.md                  # Documentation files
 ```
@@ -88,6 +99,14 @@ TEST_MFA_CODE=123456
 # Run all tests
 pytest -v
 
+# Run web tests
+pytest steps/web/ -v
+
+# Run API tests
+./run_api_tests.sh
+# or
+pytest features/api/test.feature -v
+
 # Run BDD tests
 pytest steps/ -v
 
@@ -99,10 +118,51 @@ pytest steps/web/test_login_steps.py -v
 
 # Run with specific markers
 pytest -m smoke -v
+pytest -m api -v
 pytest -m "web and smoke" -v
 ```
 
 ## Testing Styles
+
+### API Testing
+
+**Feature File** (`features/api/test.feature`):
+```gherkin
+Feature: Keycloak Authentication API
+
+  @api @authentication @positive
+  Scenario: Successful authentication with valid credentials
+    Given the Keycloak token endpoint is "https://nonprod-common-keycloak.qualgo.dev/..."
+    And I have the following authentication credentials:
+      | field         | value                  |
+      | client_id     | be-admin               |
+      | client_secret | your-secret            |
+      | username      | user@example.com       |
+      | password      | Password123@           |
+      | grant_type    | password               |
+    When I send a POST request to the token endpoint
+    Then the response status code should be 200
+    And the response should contain "access_token"
+    And the access token should be a valid JWT token
+```
+
+**Run API Tests**:
+```bash
+# Using the shell script (recommended)
+./run_api_tests.sh
+
+# Run specific test types
+./run_api_tests.sh -m positive
+./run_api_tests.sh -m negative
+
+# Or using pytest directly
+pytest features/api/test.feature -v
+```
+
+**See also:**
+- `API_QUICK_START.md` - Quick start guide
+- `API_TEST_GUIDE.md` - Comprehensive documentation
+- `examples/api_usage_example.py` - Working examples
 
 ### BDD Style (Behavior Driven Development)
 
@@ -320,7 +380,12 @@ Configure in `pytest.ini`:
 - `@smoke` - Quick sanity tests (~5-10 min)
 - `@regression` - Full test suite
 - `@web` - Web UI tests
+- `@api` - API tests
 - `@login` - Login-specific tests
+- `@authentication` - Authentication tests
+- `@positive` - Positive test cases
+- `@negative` - Negative test cases
+- `@validation` - Validation tests
 
 ### Usage
 
@@ -454,9 +519,19 @@ playwright install chromium
 
 ## Documentation
 
+### General
 - **README.md** (this file) - Project overview
+- **TEST_SUMMARY.md** - Overall test summary
+
+### Web Testing
 - **LOGIN_TEST_GUIDE.md** - Detailed login testing guide
 - **pages/README.md** - Page Object Model guide (if exists)
+
+### API Testing
+- **API_QUICK_START.md** - Quick start guide for API tests
+- **API_TEST_GUIDE.md** - Comprehensive API testing documentation
+- **API_TEST_IMPLEMENTATION_SUMMARY.md** - Implementation details
+- **examples/api_usage_example.py** - Working code examples
 
 ## Best Practices
 
@@ -505,3 +580,4 @@ For questions or issues:
 - **v1.1** - Added BDD support with pytest-bdd
 - **v1.2** - Added login feature with Microsoft SSO
 - **v1.3** - Enhanced reporting and CI/CD support
+- **v1.4** - Added comprehensive API testing for Keycloak authentication
