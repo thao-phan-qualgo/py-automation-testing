@@ -47,13 +47,27 @@ venv:
 # Installation
 install:
 	@echo "Installing dependencies..."
-	pip install -r requirements.txt
+	@if [ -n "$$VIRTUAL_ENV" ]; then \
+		python -m pip install -r requirements.txt; \
+	else \
+		echo "⚠️  No virtual environment detected."; \
+		echo "Activate with: source .venv/bin/activate"; \
+		echo "Or create with: make venv"; \
+		exit 1; \
+	fi
 	@echo "✅ Dependencies installed!"
 
 install-dev:
 	@echo "Installing development dependencies..."
-	pip install -r requirements.txt
-	pip install black flake8 pylint mypy
+	@if [ -n "$$VIRTUAL_ENV" ]; then \
+		python -m pip install -r requirements.txt; \
+		python -m pip install black flake8 pylint mypy; \
+	else \
+		echo "⚠️  No virtual environment detected."; \
+		echo "Activate with: source .venv/bin/activate"; \
+		echo "Or create with: make venv"; \
+		exit 1; \
+	fi
 	@echo "✅ Dev dependencies installed!"
 
 # Full setup
@@ -120,20 +134,41 @@ test-negative:
 # Code Quality
 lint:
 	@echo "Running linters..."
-	@echo "Checking with flake8..."
-	-flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-	@echo "Checking with pylint..."
-	-pylint steps/ pages/ utils/ config/ || true
+	@if command -v flake8 >/dev/null 2>&1; then \
+		echo "Checking with flake8..."; \
+		flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics || true; \
+	else \
+		echo "⚠️  flake8 not installed. Install with: pip install flake8"; \
+	fi
+	@if command -v pylint >/dev/null 2>&1; then \
+		echo "Checking with pylint..."; \
+		pylint steps/ pages/ utils/ config/ --exit-zero 2>/dev/null || true; \
+	else \
+		echo "⚠️  pylint not installed. Install with: pip install pylint"; \
+	fi
 	@echo "✅ Linting complete!"
 
 format:
 	@echo "Formatting code with black..."
-	black steps/ pages/ utils/ config/ --line-length 88
-	@echo "✅ Code formatted!"
+	@if command -v black >/dev/null 2>&1; then \
+		black steps/ pages/ utils/ config/ --line-length 88; \
+		echo "✅ Code formatted!"; \
+	else \
+		echo "❌ black not installed."; \
+		echo "Install with: pip install black"; \
+		echo "Or run: make install-dev"; \
+		exit 1; \
+	fi
 
 format-check:
 	@echo "Checking code format..."
-	black steps/ pages/ utils/ config/ --check --line-length 88
+	@if command -v black >/dev/null 2>&1; then \
+		black steps/ pages/ utils/ config/ --check --line-length 88; \
+	else \
+		echo "❌ black not installed."; \
+		echo "Install with: pip install black"; \
+		exit 1; \
+	fi
 
 # Reports
 report:
