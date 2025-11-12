@@ -162,6 +162,14 @@ class LoginPage(BasePage):
         """Check if error message is visible"""
         return self.get_error_message() is not None
 
+    def click_team_button(self, team_name: str) -> None:
+        """Click the team selection button after successful login."""
+        self.page.get_by_role("button", name=team_name).click()
+
+    def select_team_from_dropdown(self, team_name: str) -> None:
+        """Select a team from the team dropdown menu."""
+        self.page.get_by_label(team_name).get_by_text(team_name).click()
+
     def complete_full_login(self, email, password, stay_signed_in=True):
         """Complete full login flow in one method"""
         self.click_sign_in_with_microsoft()
@@ -176,3 +184,11 @@ class LoginPage(BasePage):
         else:
             self.click_stay_signed_in_no()
         self.get_dashboard_heading_text()
+
+    def complete_full_login_with_team(
+        self, email: str, password: str, team_name: str, stay_signed_in: bool = True
+    ) -> None:
+        """Complete full login flow with team selection."""
+        self.complete_full_login(email, password, stay_signed_in)
+        self.click_team_button(team_name)
+        self.select_team_from_dropdown(team_name)

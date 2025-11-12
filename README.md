@@ -41,8 +41,7 @@ py-automation-testing/
 │       ├── test_sample_homepage.py
 │       └── test_login.py
 ├── config/                # Configuration
-│   ├── settings.py       # Web test settings
-│   └── api_config.py     # API test configuration
+│   └── settings.py       # Unified configuration (web + API)
 ├── utils/                 # Utility functions
 │   └── api_helper.py     # API testing utilities
 ├── examples/              # Example scripts

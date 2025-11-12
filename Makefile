@@ -15,12 +15,13 @@ help:
 	@echo "    make setup         - Full setup (venv + install)"
 	@echo ""
 	@echo "  Testing:"
-	@echo "    make test          - Run all tests"
-	@echo "    make test-api      - Run API tests only"
-	@echo "    make test-web      - Run web tests only"
-	@echo "    make test-positive - Run positive API tests"
-	@echo "    make test-negative - Run negative API tests"
-	@echo "    make test-smoke    - Run smoke tests"
+	@echo "    make test                  - Run all tests with Behave"
+	@echo "    make test-api              - Run API tests only"
+	@echo "    make test-web              - Run web tests only"
+	@echo "    make test-smoke            - Run smoke tests"
+	@echo "    make test-regression       - Run regression tests"
+	@echo "    make test-high-priority    - Run high priority tests"
+	@echo "    make test-security-posture - Run security posture tests"
 	@echo ""
 	@echo "  Code Quality:"
 	@echo "    make lint          - Run linters (check code)"
@@ -71,7 +72,7 @@ install-dev:
 	@echo "✅ Dev dependencies installed!"
 
 # Full setup
-setup: venv
+setup:
 	@echo "Setting up project..."
 	@bash -c "source .venv/bin/activate && pip install --upgrade pip && pip install -r requirements.txt"
 	@echo "✅ Setup complete!"
@@ -81,12 +82,12 @@ setup: venv
 
 # Testing - All
 test:
-	@echo "Running all tests..."
-	pytest -v --html=reports/report.html --self-contained-html
+	@echo "Running all tests with Behave..."
+	behave
 
 test-all:
 	@echo "Running all tests with verbose output..."
-	pytest -vv --html=reports/report.html --self-contained-html
+	behave --no-capture
 
 # Testing - API
 test-api:
@@ -108,28 +109,28 @@ test-api-validation:
 # Testing - Web
 test-web:
 	@echo "Running web tests..."
-	pytest features/web/ steps/web/ -v --html=reports/web_report.html --self-contained-html
+	behave features/web/
 
 test-web-smoke:
 	@echo "Running web smoke tests..."
-	pytest features/web/ steps/web/ -m smoke -v
+	behave --tags=@smoke features/web/
 
-# Testing - By marker
+# Testing - By tags
 test-smoke:
 	@echo "Running smoke tests..."
-	pytest -m smoke -v
+	behave --tags=@smoke
 
 test-regression:
 	@echo "Running regression tests..."
-	pytest -m regression -v
+	behave --tags=@regression
 
-test-positive:
-	@echo "Running positive tests..."
-	pytest -m positive -v
+test-high-priority:
+	@echo "Running high priority tests..."
+	behave --tags=@High
 
-test-negative:
-	@echo "Running negative tests..."
-	pytest -m negative -v
+test-security-posture:
+	@echo "Running security posture tests..."
+	behave --tags=@SecurityPosture
 
 # Code Quality
 lint:
@@ -253,7 +254,7 @@ info:
 	@echo "Project Information:"
 	@echo "  Name: Python Automation Testing Framework"
 	@echo "  Type: Web & API Testing"
-	@echo "  Framework: pytest + pytest-bdd + Playwright"
+	@echo "  Framework: Behave + Playwright"
 	@echo ""
 	@echo "Test Coverage:"
 	@echo "  - Web UI tests (Playwright)"
@@ -275,9 +276,9 @@ quick-start:
 	@echo "   source .venv/bin/activate"
 	@echo ""
 	@echo "3. Run tests:"
-	@echo "   make test-api      # Run API tests"
+	@echo "   make test          # Run all tests with Behave"
 	@echo "   make test-web      # Run web tests"
-	@echo "   make test          # Run all tests"
+	@echo "   make test-smoke    # Run smoke tests"
 	@echo ""
 	@echo "4. View reports:"
 	@echo "   make report        # Open HTML report"
