@@ -87,26 +87,8 @@ def click_sign_in_button(login_page):
 
 
 @when("I wait 20 seconds for manual MFA code entry")
-def wait_for_manual_mfa_code_entry(page):
-    """Wait 20 seconds for user to manually enter MFA code (script will click Verify)"""
-    import time
-    
-    seconds = 20
-    print("\n" + "="*60)
-    print("⏸️  PAUSED FOR MANUAL MFA CODE ENTRY")
-    print("="*60)
-    print("📱 Please enter the MFA code from your authenticator app")
-    print("⌨️  Just type the code - script will click Verify automatically")
-    print(f"⏰ You have {seconds} seconds...")
-    print("="*60 + "\n")
-    
-    # Wait 20 seconds for manual code entry
-    for i in range(seconds, 0, -1):
-        print(f"⏳ {i} seconds remaining...", end='\r', flush=True)
-        time.sleep(1)
-    
-    print("\n\n✅ Code entry time complete!")
-    print("🖱️  Script will now click Verify button...\n")
+def wait_for_manual_mfa_code_entry(login_page):
+    login_page.manual_enter_mfa_code()
 
 
 @when('I click the "Verify" button')

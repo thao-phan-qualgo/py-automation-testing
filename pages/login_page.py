@@ -1,16 +1,18 @@
 # pages/login_page.py
+import time
+
 from .base_page import BasePage
 
 
 class LoginPage(BasePage):
     """Page object for Login/Sign-in page with Microsoft SSO"""
-    
+
     def __init__(self, page, base_url):
         super().__init__(page, base_url)
-        
+
         # Locators - Sign-in page
         self.sign_in_with_microsoft_button = "button:has-text('Sign in with Microsoft')"
-        
+
         # Locators - Microsoft login page
         self.email_input = 'input[type="email"][name="loginfmt"]'
         self.email_input_alt = 'input[placeholder*="email"]'
@@ -18,20 +20,20 @@ class LoginPage(BasePage):
         self.password_input_alt = 'input[placeholder*="password"]'
         self.next_button = 'input[type="submit"][value="Next"]'
         self.sign_in_button = 'input[type="submit"][value="Sign in"]'
-        
+
         # Locators - MFA verification
         self.mfa_code_input = 'input[name="otc"]'
         self.mfa_code_input_alt = 'input[placeholder*="code"]'
         self.verify_button = 'input[type="submit"][value="Verify"]'
-        
+
         # Locators - Stay signed in prompt
         self.dont_show_again_checkbox = 'input[type="checkbox"]'
         self.yes_button = 'input[type="submit"][value="Yes"]'
         self.no_button = 'input[type="submit"][value="No"]'
-        
+
         # Locators - Dashboard
         self.dashboard_heading = 'h1, h2, [role="heading"]'
-        
+
         # Error messages
         self.error_message = '.error-message, [role="alert"], .alert-error'
 
@@ -62,16 +64,37 @@ class LoginPage(BasePage):
             self.wait_for_selector(self.password_input, state="visible", timeout=5000)
             self.page.fill(self.password_input, password)
         except:
-            self.wait_for_selector(self.password_input_alt, state="visible", timeout=5000)
+            self.wait_for_selector(
+                self.password_input_alt, state="visible", timeout=5000
+            )
             self.page.fill(self.password_input_alt, password)
 
     def click_sign_in(self):
         """Click Sign in button and wait for navigation"""
         self.click_and_wait(self.sign_in_button)
-        
+
         # After sign in, might go to MFA or directly to dashboard
         # Wait a moment to see which page we land on
         self.wait_for_page_load("networkidle")
+
+    def manual_enter_mfa_code(self):
+        """Wait 20 seconds for user to manually enter MFA code (script will click Verify)"""
+        seconds = 20
+        print("\n" + "=" * 60)
+        print("⏸️  PAUSED FOR MANUAL MFA CODE ENTRY")
+        print("=" * 60)
+        print("📱 Please enter the MFA code from your authenticator app")
+        print("⌨️  Just type the code - script will click Verify automatically")
+        print(f"⏰ You have {seconds} seconds...")
+        print("=" * 60 + "\n")
+
+        # Wait 20 seconds for manual code entry
+        for i in range(seconds, 0, -1):
+            print(f"⏳ {i} seconds remaining...", end="\r", flush=True)
+            time.sleep(1)
+
+        print("\n\n✅ Code entry time complete!")
+        print("🖱️  Script will now click Verify button...\n")
 
     def enter_mfa_code(self, code):
         """Enter MFA verification code"""
@@ -80,10 +103,14 @@ class LoginPage(BasePage):
             self.page.fill(self.mfa_code_input, code)
         except Exception as e1:
             try:
-                self.wait_for_selector(self.mfa_code_input_alt, state="visible", timeout=10000)
+                self.wait_for_selector(
+                    self.mfa_code_input_alt, state="visible", timeout=10000
+                )
                 self.page.fill(self.mfa_code_input_alt, code)
             except Exception as e2:
-                print(f"MFA input not found. May not be required or already past this step.")
+                print(
+                    f"MFA input not found. May not be required or already past this step."
+                )
 
     def click_verify(self):
         """Click Verify button for MFA"""
@@ -92,7 +119,9 @@ class LoginPage(BasePage):
     def check_dont_show_again(self):
         """Check 'Don't show this again' checkbox"""
         try:
-            self.wait_for_selector(self.dont_show_again_checkbox, state="visible", timeout=5000)
+            self.wait_for_selector(
+                self.dont_show_again_checkbox, state="visible", timeout=5000
+            )
             self.page.check(self.dont_show_again_checkbox)
         except:
             pass
@@ -133,18 +162,17 @@ class LoginPage(BasePage):
         """Check if error message is visible"""
         return self.get_error_message() is not None
 
-    def complete_full_login(self, email, password, mfa_code, stay_signed_in=True):
+    def complete_full_login(self, email, password, stay_signed_in=True):
         """Complete full login flow in one method"""
         self.click_sign_in_with_microsoft()
         self.enter_email(email)
         self.click_next()
         self.enter_password(password)
         self.click_sign_in()
-        self.enter_mfa_code(mfa_code)
-        self.click_verify()
-        
+        self.manual_enter_mfa_code()
+
         if stay_signed_in:
             self.click_stay_signed_in_yes()
         else:
             self.click_stay_signed_in_no()
-
+        self.get_dashboard_heading_text()

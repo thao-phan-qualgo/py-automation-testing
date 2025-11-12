@@ -105,7 +105,7 @@ pytest steps/web/ -v
 # Run API tests
 ./run_api_tests.sh
 # or
-pytest features/api/test.feature -v
+pytest features/it_asset_inventory/test.feature -v
 
 # Run BDD tests
 pytest steps/ -v
@@ -118,7 +118,7 @@ pytest steps/web/test_login_steps.py -v
 
 # Run with specific markers
 pytest -m smoke -v
-pytest -m api -v
+pytest -m it_asset_inventory -v
 pytest -m "web and smoke" -v
 ```
 
@@ -148,21 +148,9 @@ Feature: Keycloak Authentication API
 
 **Run API Tests**:
 ```bash
-# Using the shell script (recommended)
-./run_api_tests.sh
-
-# Run specific test types
-./run_api_tests.sh -m positive
-./run_api_tests.sh -m negative
-
 # Or using pytest directly
-pytest features/api/test.feature -v
+pytest features/it_asset_inventory/test.feature -v
 ```
-
-**See also:**
-- `API_QUICK_START.md` - Quick start guide
-- `API_TEST_GUIDE.md` - Comprehensive documentation
-- `examples/api_usage_example.py` - Working examples
 
 ### BDD Style (Behavior Driven Development)
 
