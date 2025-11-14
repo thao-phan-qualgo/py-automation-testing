@@ -5,11 +5,14 @@ Feature: User Login with Microsoft SSO
   I want to sign in with my Microsoft account
   So that I can access the Security Operations Dashboard
 
-  Background:
+  @test-git
+  Scenario: Login page
 	Given I am on the sign-in page
+
 
   @web @smoke @login
   Scenario: Successful login with Microsoft SSO (manual MFA)
+	Given I am on the sign-in page
 	When I click the "Sign in with Microsoft" button
 	And I enter my email "thao.pt@qualgo.net"
 	And I click the "Next" button

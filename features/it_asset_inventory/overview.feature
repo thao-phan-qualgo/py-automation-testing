@@ -7,6 +7,7 @@ Feature: IT Asset Inventory Overview
   Background:
 	Given I am logged in as an admin user
 	And I am on the Security Operations Dashboard Page
+	
 
   @OV_01 @navigation @smoke
   Scenario Outline: Navigate to Overview page via menu
