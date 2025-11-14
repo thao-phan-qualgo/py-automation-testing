@@ -62,6 +62,32 @@ jobs:
       - name: Create reports directory
         run: mkdir -p reports/allure_results reports/screenshots reports/traces
       
+      - name: Create .env file
+        run: |
+          cat > .env << EOF
+          BROWSER=${{ inputs.browser }}
+          HEADLESS=${{ inputs.headless }}
+          PORTAL_BASE_URL=${{ secrets.PORTAL_BASE_URL }}
+          TEST_EMAIL=${{ secrets.TEST_EMAIL }}
+          TEST_PASSWORD=${{ secrets.TEST_PASSWORD }}
+          DEBUG=false
+          SCREENSHOT_ON_FAILURE=true
+          TRACE=false
+          EOF
+          echo "✅ .env file created"
+      
+      - name: Verify environment
+        run: |
+          echo "🔍 Verifying environment..."
+          python --version
+          pip list | grep -E "behave|allure|playwright"
+          echo ""
+          echo "📋 Test configuration:"
+          echo "  Tag: ${{ inputs.test_tag }}"
+          echo "  Browser: ${{ inputs.browser }}"
+          echo "  Headless: ${{ inputs.headless }}"
+          echo "  Reports: ${{ inputs.generate_reports }}"
+      
       - name: Run tests with tag (with reports)
         if: inputs.generate_reports == true
         env:
@@ -106,12 +132,44 @@ jobs:
             echo "⚠️ No Allure results found"
           fi
       
+      - name: Check generated files
+        if: always()
+        run: |
+          echo "📂 Checking generated files..."
+          ls -la reports/ || echo "No reports directory"
+          if [ -f "reports/behave_report.html" ]; then
+            echo "✅ HTML report exists ($(du -h reports/behave_report.html | cut -f1))"
+          else
+            echo "⚠️ HTML report not found"
+          fi
+          if [ -d "reports/allure_results" ] && [ "$(ls -A reports/allure_results)" ]; then
+            echo "✅ Allure results exist ($(ls reports/allure_results | wc -l) files)"
+          else
+            echo "⚠️ Allure results not found or empty"
+          fi
+          if [ -d "reports/allure_report" ]; then
+            echo "✅ Allure report exists"
+          else
+            echo "⚠️ Allure report not generated"
+          fi
+          if [ -d "reports/screenshots" ] && [ "$(ls -A reports/screenshots)" ]; then
+            echo "✅ Screenshots exist ($(ls reports/screenshots | wc -l) files)"
+          else
+            echo "ℹ️ No screenshots (no failures)"
+          fi
+          if [ -d "reports/traces" ] && [ "$(ls -A reports/traces)" ]; then
+            echo "✅ Traces exist ($(ls reports/traces | wc -l) files)"
+          else
+            echo "ℹ️ No traces (no failures)"
+          fi
+      
       - name: Upload HTML report
         if: inputs.generate_reports == true && always()
         uses: actions/upload-artifact@v4
         with:
           name: html-report-${{ inputs.test_tag }}-${{ github.run_number }}
           path: reports/behave_report.html
+          if-no-files-found: warn
           retention-days: 30
       
       - name: Upload Allure results
@@ -120,6 +178,7 @@ jobs:
         with:
           name: allure-results-${{ inputs.test_tag }}-${{ github.run_number }}
           path: reports/allure_results/
+          if-no-files-found: warn
           retention-days: 30
       
       - name: Upload Allure report
@@ -128,6 +187,7 @@ jobs:
         with:
           name: allure-report-${{ inputs.test_tag }}-${{ github.run_number }}
           path: reports/allure_report/
+          if-no-files-found: warn
           retention-days: 30
       
       - name: Upload screenshots
@@ -136,6 +196,7 @@ jobs:
         with:
           name: screenshots-${{ inputs.test_tag }}-${{ github.run_number }}
           path: reports/screenshots/
+          if-no-files-found: ignore
           retention-days: 14
       
       - name: Upload traces
@@ -144,23 +205,71 @@ jobs:
         with:
           name: traces-${{ inputs.test_tag }}-${{ github.run_number }}
           path: reports/traces/
+          if-no-files-found: ignore
           retention-days: 14
       
       - name: Display test summary
         if: always()
         run: |
-          echo "## Test Execution Summary" >> $GITHUB_STEP_SUMMARY
+          echo "## 🧪 Test Execution Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Tag:** \`${{ inputs.test_tag }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "**Browser:** ${{ inputs.browser }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Headless:** ${{ inputs.headless }}" >> $GITHUB_STEP_SUMMARY
+          echo "### Configuration" >> $GITHUB_STEP_SUMMARY
+          echo "| Setting | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Tag** | \`${{ inputs.test_tag }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Browser** | ${{ inputs.browser }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Headless** | ${{ inputs.headless }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Reports** | ${{ inputs.generate_reports }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Artifacts Generated:" >> $GITHUB_STEP_SUMMARY
-          echo "- HTML Report" >> $GITHUB_STEP_SUMMARY
-          echo "- Allure Results" >> $GITHUB_STEP_SUMMARY
-          echo "- Allure Report" >> $GITHUB_STEP_SUMMARY
-          echo "- Screenshots (if any failures)" >> $GITHUB_STEP_SUMMARY
-          echo "- Traces (if any failures)" >> $GITHUB_STEP_SUMMARY
+          
+          echo "### 📊 Generated Artifacts" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "📥 Download artifacts from the workflow run page" >> $GITHUB_STEP_SUMMARY
+          
+          if [ -f "reports/behave_report.html" ]; then
+            echo "- ✅ **HTML Report** ($(du -h reports/behave_report.html | cut -f1))" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- ⚠️ HTML Report (not generated)" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [ -d "reports/allure_results" ] && [ "$(ls -A reports/allure_results 2>/dev/null)" ]; then
+            FILE_COUNT=$(ls reports/allure_results | wc -l)
+            echo "- ✅ **Allure Results** ($FILE_COUNT files)" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- ⚠️ Allure Results (not generated)" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [ -d "reports/allure_report" ] && [ -f "reports/allure_report/index.html" ]; then
+            echo "- ✅ **Allure Report** (interactive)" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- ⚠️ Allure Report (not generated)" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [ -d "reports/screenshots" ] && [ "$(ls -A reports/screenshots 2>/dev/null)" ]; then
+            SCREENSHOT_COUNT=$(ls reports/screenshots | wc -l)
+            echo "- 📸 **Screenshots** ($SCREENSHOT_COUNT files)" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- ℹ️ Screenshots (none - no failures)" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [ -d "reports/traces" ] && [ "$(ls -A reports/traces 2>/dev/null)" ]; then
+            TRACE_COUNT=$(ls reports/traces | wc -l)
+            echo "- 📊 **Traces** ($TRACE_COUNT files)" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- ℹ️ Traces (none - no failures)" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📥 How to Access Reports" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "1. Go to the **Actions** tab" >> $GITHUB_STEP_SUMMARY
+          echo "2. Click on this workflow run" >> $GITHUB_STEP_SUMMARY
+          echo "3. Scroll down to **Artifacts** section" >> $GITHUB_STEP_SUMMARY
+          echo "4. Download the reports you need" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🎯 Next Steps" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- Download and open \`html-report\` for quick results" >> $GITHUB_STEP_SUMMARY
+          echo "- Download \`allure-report\` and open \`index.html\` for detailed analysis" >> $GITHUB_STEP_SUMMARY
+          echo "- Check \`screenshots\` if tests failed" >> $GITHUB_STEP_SUMMARY
+          echo "- Use \`playwright show-trace <trace.zip>\` to debug failures" >> $GITHUB_STEP_SUMMARY
 
