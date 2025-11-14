@@ -244,7 +244,7 @@ COUNT_TEST_USERS = """
 # VALIDATION QUERIES
 # ============================================================================
 
-VALIDATE_USER_DATA = """
+VALIDATE_USER_DATA = r"""
     SELECT 
         id,
         name,
@@ -258,7 +258,7 @@ VALIDATE_USER_DATA = """
     WHERE id = %s;
 """
 
-GET_USERS_WITH_INVALID_EMAIL = """
+GET_USERS_WITH_INVALID_EMAIL = r"""
     SELECT * FROM users 
     WHERE email !~ '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$';
 """
