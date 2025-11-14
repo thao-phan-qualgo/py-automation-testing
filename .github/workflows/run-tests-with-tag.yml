@@ -87,6 +87,33 @@ jobs:
           echo "  Browser: ${{ inputs.browser }}"
           echo "  Headless: ${{ inputs.headless }}"
           echo "  Reports: ${{ inputs.generate_reports }}"
+          echo ""
+          echo "🔍 Checking if tag exists in feature files:"
+          if grep -r "${{ inputs.test_tag }}" features/ > /dev/null 2>&1; then
+            echo "✅ Tag found in:"
+            grep -r "${{ inputs.test_tag }}" features/ | cut -d: -f1 | sort -u
+          else
+            echo "⚠️ WARNING: Tag '${{ inputs.test_tag }}' not found in any feature files!"
+            echo "Available tags:"
+            grep -rh "@" features/ | grep -o "@[A-Za-z_0-9]*" | sort -u | head -20
+          fi
+          echo ""
+          echo "🔐 Checking secrets (value presence only):"
+          [ -n "${{ secrets.PORTAL_BASE_URL }}" ] && echo "✅ PORTAL_BASE_URL is set" || echo "❌ PORTAL_BASE_URL is NOT set"
+          [ -n "${{ secrets.TEST_EMAIL }}" ] && echo "✅ TEST_EMAIL is set" || echo "❌ TEST_EMAIL is NOT set"
+          [ -n "${{ secrets.TEST_PASSWORD }}" ] && echo "✅ TEST_PASSWORD is set" || echo "❌ TEST_PASSWORD is NOT set"
+      
+      - name: Dry run to verify tests exist
+        run: |
+          echo "🔍 Performing dry run to check if tests can be found..."
+          behave --tags=${{ inputs.test_tag }} --dry-run --no-capture || {
+            echo "❌ Dry run failed! This means:"
+            echo "   - Tag '${{ inputs.test_tag }}' might not exist"
+            echo "   - Or no scenarios match this tag"
+            echo "   - Or there's a syntax error in feature files"
+            exit 1
+          }
+          echo "✅ Dry run successful - tests found!"
       
       - name: Run tests with tag (with reports)
         if: inputs.generate_reports == true
@@ -100,6 +127,7 @@ jobs:
           set +e  # Don't exit on error
           echo "🧪 Running tests with tag: ${{ inputs.test_tag }}"
           echo "📊 Reports will be generated in: reports/"
+          echo ""
           
           behave --tags=${{ inputs.test_tag }} \
                  --format html --outfile reports/behave_report.html \
@@ -107,12 +135,21 @@ jobs:
                  --format pretty
           
           TEST_EXIT_CODE=$?
+          echo ""
+          echo "═══════════════════════════════════════════════════════"
           echo "Test execution completed with exit code: $TEST_EXIT_CODE"
+          echo "═══════════════════════════════════════════════════════"
           
           # Show what was generated
           echo ""
           echo "📂 Generated files:"
-          ls -lh reports/ || echo "No reports directory"
+          ls -lh reports/ || echo "⚠️ No reports directory"
+          
+          if [ $TEST_EXIT_CODE -ne 0 ]; then
+            echo ""
+            echo "⚠️ Tests failed or encountered errors"
+            echo "Check the logs above for details"
+          fi
           
           exit 0  # Always succeed so we can upload artifacts
         continue-on-error: true
