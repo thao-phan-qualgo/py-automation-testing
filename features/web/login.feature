@@ -24,6 +24,7 @@ Feature: User Login with Microsoft SSO
 
   @web @login @team-selection
   Scenario: Successful login with team selection
+	Given I am on the sign-in page
 	When I click the "Sign in with Microsoft" button
 	And I enter my email "thao.pt@qualgo.net"
 	And I click the "Next" button

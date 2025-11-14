@@ -28,3 +28,6 @@ urllib3==2.5.0
 # Behave reporting extensions
 behave-html-formatter==0.9.10
 allure-behave==2.15.0
+
+# Database
+psycopg2-binary==2.9.10
