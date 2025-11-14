@@ -97,10 +97,24 @@ jobs:
           TEST_EMAIL: ${{ secrets.TEST_EMAIL }}
           TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
         run: |
+          set +e  # Don't exit on error
+          echo "🧪 Running tests with tag: ${{ inputs.test_tag }}"
+          echo "📊 Reports will be generated in: reports/"
+          
           behave --tags=${{ inputs.test_tag }} \
                  --format html --outfile reports/behave_report.html \
                  --format allure_behave.formatter:AllureFormatter --outfile reports/allure_results \
-                 --format pretty || true
+                 --format pretty
+          
+          TEST_EXIT_CODE=$?
+          echo "Test execution completed with exit code: $TEST_EXIT_CODE"
+          
+          # Show what was generated
+          echo ""
+          echo "📂 Generated files:"
+          ls -lh reports/ || echo "No reports directory"
+          
+          exit 0  # Always succeed so we can upload artifacts
         continue-on-error: true
       
       - name: Run tests with tag (without reports)
@@ -136,31 +150,67 @@ jobs:
         if: always()
         run: |
           echo "📂 Checking generated files..."
-          ls -la reports/ || echo "No reports directory"
-          if [ -f "reports/behave_report.html" ]; then
-            echo "✅ HTML report exists ($(du -h reports/behave_report.html | cut -f1))"
-          else
-            echo "⚠️ HTML report not found"
+          echo ""
+          echo "Directory structure:"
+          ls -la reports/ || echo "❌ No reports directory found!"
+          echo ""
+          
+          # Check if reports directory exists
+          if [ ! -d "reports" ]; then
+            echo "❌ CRITICAL: reports/ directory doesn't exist!"
+            echo "This indicates the test execution step failed early."
+            exit 0
           fi
-          if [ -d "reports/allure_results" ] && [ "$(ls -A reports/allure_results)" ]; then
-            echo "✅ Allure results exist ($(ls reports/allure_results | wc -l) files)"
+          
+          # Check each artifact
+          echo "Artifact check:"
+          if [ -f "reports/behave_report.html" ]; then
+            SIZE=$(du -h reports/behave_report.html | cut -f1)
+            echo "✅ HTML report exists (size: $SIZE)"
+          else
+            echo "⚠️ HTML report not found - tests may not have run"
+          fi
+          
+          if [ -d "reports/allure_results" ] && [ "$(ls -A reports/allure_results 2>/dev/null)" ]; then
+            FILE_COUNT=$(ls reports/allure_results | wc -l)
+            echo "✅ Allure results exist ($FILE_COUNT files)"
+            ls -lh reports/allure_results | head -5
           else
             echo "⚠️ Allure results not found or empty"
+            echo "   Possible causes:"
+            echo "   - Behave command failed"
+            echo "   - No tests matched the tag"
+            echo "   - allure-behave formatter not working"
           fi
-          if [ -d "reports/allure_report" ]; then
+          
+          if [ -d "reports/allure_report" ] && [ -f "reports/allure_report/index.html" ]; then
             echo "✅ Allure report exists"
           else
             echo "⚠️ Allure report not generated"
+            echo "   (This is expected if allure-results is empty)"
           fi
-          if [ -d "reports/screenshots" ] && [ "$(ls -A reports/screenshots)" ]; then
-            echo "✅ Screenshots exist ($(ls reports/screenshots | wc -l) files)"
+          
+          if [ -d "reports/screenshots" ] && [ "$(ls -A reports/screenshots 2>/dev/null)" ]; then
+            SCREENSHOT_COUNT=$(ls reports/screenshots | wc -l)
+            echo "✅ Screenshots exist ($SCREENSHOT_COUNT files)"
           else
-            echo "ℹ️ No screenshots (no failures)"
+            echo "ℹ️ No screenshots (no test failures)"
           fi
-          if [ -d "reports/traces" ] && [ "$(ls -A reports/traces)" ]; then
-            echo "✅ Traces exist ($(ls reports/traces | wc -l) files)"
+          
+          if [ -d "reports/traces" ] && [ "$(ls -A reports/traces 2>/dev/null)" ]; then
+            TRACE_COUNT=$(ls reports/traces | wc -l)
+            echo "✅ Traces exist ($TRACE_COUNT files)"
           else
-            echo "ℹ️ No traces (no failures)"
+            echo "ℹ️ No traces (no test failures or TRACE disabled)"
+          fi
+          
+          echo ""
+          echo "💡 Troubleshooting tips:"
+          if [ ! -f "reports/behave_report.html" ] && [ ! -d "reports/allure_results" ]; then
+            echo "   - Check if the test tag exists: grep -r '${{ inputs.test_tag }}' features/"
+            echo "   - Verify PORTAL_BASE_URL secret is set"
+            echo "   - Verify TEST_EMAIL and TEST_PASSWORD secrets are set"
+            echo "   - Check 'Run tests with tag' step logs for errors"
           fi
       
       - name: Upload HTML report
