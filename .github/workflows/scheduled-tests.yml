@@ -1,0 +1,140 @@
+name: Scheduled Test Runs
+
+on:
+  # Run smoke tests every day at 8 AM UTC
+  schedule:
+    - cron: '0 8 * * *'  # Daily at 8 AM UTC
+  
+  # Allow manual trigger
+  workflow_dispatch:
+    inputs:
+      test_suite:
+        description: 'Test suite to run'
+        required: true
+        default: 'smoke'
+        type: choice
+        options:
+          - smoke
+          - regression
+          - high-priority
+          - security-posture
+          - all
+
+jobs:
+  scheduled-tests:
+    name: Scheduled ${{ github.event.inputs.test_suite || 'smoke' }} Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 📦 Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: 🎭 Install Playwright
+        run: |
+          playwright install chromium
+          playwright install-deps chromium
+
+      - name: 📁 Create reports directory
+        run: |
+          mkdir -p reports/allure_results
+          mkdir -p reports/screenshots
+          mkdir -p reports/traces
+
+      - name: 🧪 Run tests
+        env:
+          PORTAL_BASE_URL: ${{ secrets.PORTAL_BASE_URL }}
+          TEST_EMAIL: ${{ secrets.TEST_EMAIL }}
+          TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
+          BROWSER: chromium
+          HEADLESS: true
+          SCREENSHOT_ON_FAILURE: true
+          TRACE: true
+        run: |
+          SUITE="${{ github.event.inputs.test_suite || 'smoke' }}"
+          
+          case $SUITE in
+            smoke)
+              TAG="@smoke"
+              ;;
+            regression)
+              TAG="@regression"
+              ;;
+            high-priority)
+              TAG="@High"
+              ;;
+            security-posture)
+              TAG="@SecurityPosture"
+              ;;
+            all)
+              TAG=""
+              ;;
+            *)
+              TAG="@smoke"
+              ;;
+          esac
+          
+          echo "🏷️  Running $SUITE tests with tag: $TAG"
+          
+          if [ -z "$TAG" ]; then
+            behave --format html --outfile reports/behave_report.html \
+                   --format allure_behave.formatter:AllureFormatter --outfile reports/allure_results \
+                   --format pretty || true
+          else
+            behave --tags="$TAG" \
+                   --format html --outfile reports/behave_report.html \
+                   --format allure_behave.formatter:AllureFormatter --outfile reports/allure_results \
+                   --format pretty || true
+          fi
+
+      - name: 📊 Install Allure CLI
+        if: always()
+        run: |
+          sudo wget https://github.com/allure-framework/allure2/releases/download/2.25.0/allure-2.25.0.tgz
+          sudo tar -zxvf allure-2.25.0.tgz -C /opt/
+          sudo ln -s /opt/allure-2.25.0/bin/allure /usr/bin/allure
+
+      - name: 📈 Generate Allure report
+        if: always()
+        run: |
+          if [ -d "reports/allure_results" ] && [ "$(ls -A reports/allure_results)" ]; then
+            allure generate reports/allure_results -o reports/allure_report --clean
+          fi
+
+      - name: 📤 Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports-${{ github.event.inputs.test_suite || 'smoke' }}-${{ github.run_number }}
+          path: reports/
+          retention-days: 30
+
+      - name: 📧 Send notification on failure
+        if: failure()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: '❌ Scheduled Tests Failed - ${{ github.event.inputs.test_suite || 'smoke' }}'
+          to: ${{ secrets.NOTIFICATION_EMAIL }}
+          from: GitHub Actions
+          body: |
+            Scheduled test run has failed.
+            
+            Suite: ${{ github.event.inputs.test_suite || 'smoke' }}
+            Run: ${{ github.run_number }}
+            
+            View details: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+

@@ -21,6 +21,15 @@ from pathlib import Path
 from datetime import datetime
 from playwright.sync_api import sync_playwright
 
+# Import Allure for enhanced reporting
+try:
+    import allure
+    from allure_commons.types import AttachmentType
+
+    ALLURE_AVAILABLE = True
+except ImportError:
+    ALLURE_AVAILABLE = False
+
 # Ensure project root is in Python path for imports
 project_root = Path(__file__).parent.parent
 if str(project_root) not in sys.path:
@@ -177,6 +186,7 @@ def after_scenario(context, scenario):
     Handles cleanup and captures debugging artifacts on failure:
     - Saves trace files
     - Takes screenshots
+    - Attaches artifacts to Allure report
     - Closes browser context and page
 
     Args:
@@ -198,6 +208,17 @@ def after_scenario(context, scenario):
             print(f"\n📊 Trace saved: {trace_path}")
             print(f"   View with: playwright show-trace {trace_path}\n")
             logger.info(f"Trace saved: {trace_path}")
+
+            # Attach trace to Allure report
+            if ALLURE_AVAILABLE:
+                try:
+                    allure.attach.file(
+                        trace_path,
+                        name="Playwright Trace",
+                        attachment_type=AttachmentType.ZIP,
+                    )
+                except Exception as e:
+                    logger.debug(f"Could not attach trace to Allure: {e}")
         except Exception as e:
             logger.error(f"Failed to save trace: {e}")
     elif TRACE:
@@ -215,11 +236,38 @@ def after_scenario(context, scenario):
         filepath = os.path.join(screenshot_dir, f"{scenario_name}_{timestamp}.png")
 
         try:
-            context.page.screenshot(path=filepath, full_page=True)
+            screenshot_bytes = context.page.screenshot(path=filepath, full_page=True)
             print(f"📸 Screenshot saved: {filepath}\n")
             logger.info(f"Screenshot saved: {filepath}")
+
+            # Attach screenshot to Allure report
+            if ALLURE_AVAILABLE:
+                try:
+                    allure.attach(
+                        screenshot_bytes,
+                        name=f"Failure Screenshot - {scenario.name}",
+                        attachment_type=AttachmentType.PNG,
+                    )
+                except Exception as e:
+                    logger.debug(f"Could not attach screenshot to Allure: {e}")
         except Exception as e:
             logger.error(f"Failed to save screenshot: {e}")
+
+    # Attach browser console logs on failure (for debugging)
+    if ALLURE_AVAILABLE and scenario.status == "failed":
+        try:
+            # Capture page URL and other debugging info
+            page_info = f"URL: {context.page.url}\n"
+            page_info += f"Title: {context.page.title()}\n"
+            page_info += f"Status: {scenario.status}\n"
+
+            allure.attach(
+                page_info,
+                name="Page Information",
+                attachment_type=AttachmentType.TEXT,
+            )
+        except Exception as e:
+            logger.debug(f"Could not attach page info to Allure: {e}")
 
     # Always cleanup: close page and context
     try:

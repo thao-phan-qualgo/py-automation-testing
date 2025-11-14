@@ -54,8 +54,6 @@ def step_logged_in_as_admin(context):
 @given("I am on the Security Operations Dashboard Page")
 def step_on_dashboard_page(context):
     """Step: Verify user is on the Security Operations Dashboard page."""
-    # User should already be on dashboard after login in Background
-    # Just verify we're on the correct page
     context.page.wait_for_load_state("networkidle")
 
 
@@ -129,7 +127,7 @@ def step_verify_metric_card_count(context, count):
     )
 
 
-@then('I should see the "{metric_name}" metric card')
+@then('I should see the "{metric_name}" metric card with value displayed')
 def step_verify_metric_card_visible(context, metric_name):
     """Step: Verify a specific metric card is visible by name."""
     overview_page = get_overview_page(context)
@@ -145,3 +143,88 @@ def step_verify_metric_values_numeric(context):
     overview_page = get_overview_page(context)
     is_valid, message = overview_page.verify_all_metric_values_numeric()
     assert is_valid, f"Metric value validation failed: {message}"
+
+
+# ============================================================================
+# ENDPOINT DEVICES SECTION STEPS
+# ============================================================================
+
+
+@when('I scroll to the "{section_name}" section')
+def step_scroll_to_section(context, section_name):
+    """Step: Scroll to a specific section on the page."""
+    overview_page = get_overview_page(context)
+    if section_name == "Endpoint Devices":
+        overview_page.scroll_to_endpoint_devices_section()
+    else:
+        overview_page.page.evaluate(
+            f"document.querySelector('h2:has-text(\"{section_name}\")').scrollIntoView()"
+        )
+    context.page.wait_for_timeout(500)
+
+
+@then('I should see the "{section_title}" section title')
+def step_verify_section_title_generic(context, section_title):
+    """Step: Verify a generic section title is visible."""
+    overview_page = get_overview_page(context)
+    if section_title == "Endpoint Devices":
+        assert (
+            overview_page.is_endpoint_devices_title_visible()
+        ), f"Section title '{section_title}' is not visible"
+    else:
+        assert overview_page.is_section_title_visible(
+            section_title
+        ), f"Section title '{section_title}' is not visible"
+
+
+@then("I should see the pie chart displayed")
+def step_verify_pie_chart_displayed(context):
+    """Step: Verify pie chart is displayed."""
+    overview_page = get_overview_page(context)
+    assert (
+        overview_page.is_pie_chart_displayed()
+    ), "Pie chart is not displayed in the Endpoint Devices section"
+
+
+@then('I should see the "{text}" breakdown')
+def step_verify_breakdown_text(context, text):
+    """Step: Verify specific breakdown text is visible."""
+    overview_page = get_overview_page(context)
+    assert (
+        overview_page.is_devices_by_criticality_visible()
+    ), f"'{text}' breakdown text is not visible"
+
+
+@then("I should see devices grouped by criticality levels")
+def step_verify_criticality_levels(context):
+    """Step: Verify all criticality levels are visible using data table."""
+    overview_page = get_overview_page(context)
+
+    for row in context.table:
+        criticality_level = row["criticality_level"]
+        assert overview_page.is_criticality_level_visible(
+            criticality_level
+        ), f"Criticality level '{criticality_level}' is not visible"
+
+
+@then("I should see the total devices count displayed")
+def step_verify_total_devices_count(context):
+    """Step: Verify total devices count is displayed."""
+    overview_page = get_overview_page(context)
+    assert (
+        overview_page.is_total_devices_count_displayed()
+    ), "Total devices count is not displayed"
+
+
+@then('I should see the "{link_text}" link available')
+def step_verify_link_available(context, link_text):
+    """Step: Verify a specific link is available."""
+    overview_page = get_overview_page(context)
+    if link_text == "View More":
+        assert (
+            overview_page.is_view_more_link_available()
+        ), f"'{link_text}' link is not available"
+    else:
+        assert context.page.get_by_text(
+            link_text
+        ).is_visible(), f"'{link_text}' link is not available"

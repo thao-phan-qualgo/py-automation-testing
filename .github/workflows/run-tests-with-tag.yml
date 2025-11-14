@@ -1,0 +1,166 @@
+name: Run Tests with Tag Input
+
+on:
+  workflow_dispatch:
+    inputs:
+      test_tag:
+        description: 'Behave tag to run (e.g., @smoke, @OV_03, @High)'
+        required: true
+        default: '@smoke'
+        type: string
+      browser:
+        description: 'Browser to use for tests'
+        required: false
+        default: 'chromium'
+        type: choice
+        options:
+          - chromium
+          - firefox
+          - webkit
+      headless:
+        description: 'Run tests in headless mode'
+        required: false
+        default: true
+        type: boolean
+      generate_reports:
+        description: 'Generate HTML and Allure reports'
+        required: false
+        default: true
+        type: boolean
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Cache Python dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      - name: Install Playwright browsers
+        run: |
+          playwright install ${{ inputs.browser }}
+          playwright install-deps ${{ inputs.browser }}
+      
+      - name: Create reports directory
+        run: mkdir -p reports/allure_results reports/screenshots reports/traces
+      
+      - name: Run tests with tag (with reports)
+        if: inputs.generate_reports == true
+        env:
+          BROWSER: ${{ inputs.browser }}
+          HEADLESS: ${{ inputs.headless }}
+          PORTAL_BASE_URL: ${{ secrets.PORTAL_BASE_URL }}
+          TEST_EMAIL: ${{ secrets.TEST_EMAIL }}
+          TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
+        run: |
+          behave --tags=${{ inputs.test_tag }} \
+                 --format html --outfile reports/behave_report.html \
+                 --format allure_behave.formatter:AllureFormatter --outfile reports/allure_results \
+                 --format pretty || true
+        continue-on-error: true
+      
+      - name: Run tests with tag (without reports)
+        if: inputs.generate_reports == false
+        env:
+          BROWSER: ${{ inputs.browser }}
+          HEADLESS: ${{ inputs.headless }}
+          PORTAL_BASE_URL: ${{ secrets.PORTAL_BASE_URL }}
+          TEST_EMAIL: ${{ secrets.TEST_EMAIL }}
+          TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
+        run: |
+          behave --tags=${{ inputs.test_tag }} --format pretty || true
+        continue-on-error: true
+      
+      - name: Install Allure CLI
+        if: inputs.generate_reports == true && always()
+        run: |
+          sudo wget https://github.com/allure-framework/allure2/releases/download/2.25.0/allure-2.25.0.tgz
+          sudo tar -zxvf allure-2.25.0.tgz -C /opt/
+          sudo ln -s /opt/allure-2.25.0/bin/allure /usr/bin/allure
+      
+      - name: Generate Allure report
+        if: inputs.generate_reports == true && always()
+        run: |
+          if [ -d "reports/allure_results" ] && [ "$(ls -A reports/allure_results)" ]; then
+            allure generate reports/allure_results -o reports/allure_report --clean
+            echo "✅ Allure report generated successfully"
+          else
+            echo "⚠️ No Allure results found"
+          fi
+      
+      - name: Upload HTML report
+        if: inputs.generate_reports == true && always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: html-report-${{ inputs.test_tag }}-${{ github.run_number }}
+          path: reports/behave_report.html
+          retention-days: 30
+      
+      - name: Upload Allure results
+        if: inputs.generate_reports == true && always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-results-${{ inputs.test_tag }}-${{ github.run_number }}
+          path: reports/allure_results/
+          retention-days: 30
+      
+      - name: Upload Allure report
+        if: inputs.generate_reports == true && always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-report-${{ inputs.test_tag }}-${{ github.run_number }}
+          path: reports/allure_report/
+          retention-days: 30
+      
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots-${{ inputs.test_tag }}-${{ github.run_number }}
+          path: reports/screenshots/
+          retention-days: 14
+      
+      - name: Upload traces
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: traces-${{ inputs.test_tag }}-${{ github.run_number }}
+          path: reports/traces/
+          retention-days: 14
+      
+      - name: Display test summary
+        if: always()
+        run: |
+          echo "## Test Execution Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Tag:** \`${{ inputs.test_tag }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Browser:** ${{ inputs.browser }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Headless:** ${{ inputs.headless }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Artifacts Generated:" >> $GITHUB_STEP_SUMMARY
+          echo "- HTML Report" >> $GITHUB_STEP_SUMMARY
+          echo "- Allure Results" >> $GITHUB_STEP_SUMMARY
+          echo "- Allure Report" >> $GITHUB_STEP_SUMMARY
+          echo "- Screenshots (if any failures)" >> $GITHUB_STEP_SUMMARY
+          echo "- Traces (if any failures)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📥 Download artifacts from the workflow run page" >> $GITHUB_STEP_SUMMARY
+

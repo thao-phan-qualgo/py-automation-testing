@@ -19,13 +19,42 @@ Feature: IT Asset Inventory Overview
 	  | IT Asset Inventory | Overview     |
 
   @OV_02 @SecurityPosture @High @metrics
-  Scenario: Verify Security Posture Overview metrics display correctly
+  Scenario Outline: Verify Security Posture Overview metrics display correctly
 	Given I am on the Overview page
 	When I locate the "Security Posture Overview" section
 	Then I should see the section title "Security Posture Overview"
 	And I should see 4 metric cards displayed
-	And I should see the "Critical Assets" metric card
-	And I should see the "Non-Compliant Assets" metric card
-	And I should see the "Inactive Devices" metric card
-	And I should see the "Compliance Coverage" metric card
-	And all metric values should be numeric and properly formatted
+	And I should see the "<metric_card>" metric card with value displayed
+
+	Examples:
+	  | metric_card          |
+	  | Critical Assets      |
+	  | Non-Compliant Assets |
+	  | Inactive Devices     |
+	  | Compliance Coverage  |
+
+  @OV_03 @SecurityPosture @validation
+  Scenario: Verify all metric values are properly formatted
+	Given I am on the Overview page
+	When I locate the "Security Posture Overview" section
+	Then all metric values should be numeric and properly formatted
+
+
+  @OV_04 @EndpointDevices @High @chart
+  Scenario: Verify Endpoint Devices section displays device distribution
+	Given I am on the Overview page
+	When I scroll to the "Endpoint Devices" section
+	Then I should see the "Endpoint Devices" section title
+	And I should see the pie chart displayed
+	And I should see the "Devices by Criticality" breakdown
+	And I should see devices grouped by criticality levels
+	  | criticality_level |
+	  | Critical          |
+	  | High              |
+	  | Medium            |
+	  | Low               |
+	And I should see the total devices count displayed
+	And I should see the "View More" link available
+
+
+

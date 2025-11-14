@@ -28,9 +28,13 @@ help:
 	@echo "    make format        - Format code with black"
 	@echo ""
 	@echo "  Reports:"
-	@echo "    make report        - Open HTML test report"
-	@echo "    make allure        - Generate Allure report"
-	@echo "    make allure-serve  - Serve Allure report"
+	@echo "    make test-html             - Run tests with HTML report"
+	@echo "    make test-allure           - Run tests with Allure report"
+	@echo "    make test-report           - Run tests with both HTML and Allure"
+	@echo "    make report                - Open HTML test report"
+	@echo "    make allure-report         - Generate Allure report from results"
+	@echo "    make allure-serve          - Serve Allure report in browser"
+	@echo "    make allure-clean          - Clean Allure results"
 	@echo ""
 	@echo "  Cleanup:"
 	@echo "    make clean         - Remove cache and temp files"
@@ -88,6 +92,33 @@ test:
 test-all:
 	@echo "Running all tests with verbose output..."
 	behave --no-capture
+
+# Testing - With HTML Report
+test-html:
+	@echo "Running tests with HTML report..."
+	@mkdir -p reports
+	behave --format html --outfile reports/behave_report.html --format pretty
+	@echo "✅ HTML report generated: reports/behave_report.html"
+
+# Testing - With Allure Report
+test-allure:
+	@echo "Running tests with Allure report..."
+	@mkdir -p reports/allure_results
+	behave --format allure_behave.formatter:AllureFormatter --outfile reports/allure_results --format pretty
+	@echo "✅ Allure results generated: reports/allure_results"
+	@echo "Generate report with: make allure-report"
+	@echo "Or serve directly with: make allure-serve"
+
+# Testing - With Both Reports
+test-report:
+	@echo "Running tests with HTML and Allure reports..."
+	@mkdir -p reports reports/allure_results
+	behave --format html --outfile reports/behave_report.html \
+	       --format allure_behave.formatter:AllureFormatter --outfile reports/allure_results \
+	       --format pretty
+	@echo "✅ HTML report: reports/behave_report.html"
+	@echo "✅ Allure results: reports/allure_results"
+	@echo "Generate Allure report with: make allure-report"
 
 # Testing - API
 test-api:
@@ -174,10 +205,12 @@ format-check:
 # Reports
 report:
 	@echo "Opening HTML report..."
-	@if [ -f reports/report.html ]; then \
+	@if [ -f reports/behave_report.html ]; then \
+		open reports/behave_report.html 2>/dev/null || xdg-open reports/behave_report.html 2>/dev/null || start reports/behave_report.html 2>/dev/null || echo "Please open reports/behave_report.html manually"; \
+	elif [ -f reports/report.html ]; then \
 		open reports/report.html 2>/dev/null || xdg-open reports/report.html 2>/dev/null || start reports/report.html 2>/dev/null || echo "Please open reports/report.html manually"; \
 	else \
-		echo "❌ No report found. Run 'make test' first."; \
+		echo "❌ No HTML report found. Run 'make test-html' or 'make test-report' first."; \
 	fi
 
 report-api:
@@ -197,16 +230,51 @@ report-web:
 	fi
 
 # Allure Reports
-allure:
+allure-report:
 	@echo "Generating Allure report..."
-	pytest -v --alluredir=reports/allure_results
-	allure generate reports/allure_results -o reports/allure_report --clean
-	@echo "✅ Allure report generated!"
-	@echo "View at: reports/allure_report/index.html"
+	@if [ ! -d "reports/allure_results" ] || [ -z "$$(ls -A reports/allure_results 2>/dev/null)" ]; then \
+		echo "❌ No Allure results found. Run 'make test-allure' or 'make test-report' first."; \
+		exit 1; \
+	fi
+	@if command -v allure >/dev/null 2>&1; then \
+		allure generate reports/allure_results -o reports/allure_report --clean; \
+		echo "✅ Allure report generated!"; \
+		echo "📊 View at: reports/allure_report/index.html"; \
+		echo "Or open with: open reports/allure_report/index.html"; \
+	else \
+		echo "❌ Allure CLI not installed."; \
+		echo "Install with: brew install allure (macOS)"; \
+		echo "Or download from: https://docs.qameta.io/allure/#_installing_a_commandline"; \
+		exit 1; \
+	fi
 
 allure-serve:
 	@echo "Serving Allure report..."
-	allure serve reports/allure_results
+	@if [ ! -d "reports/allure_results" ] || [ -z "$$(ls -A reports/allure_results 2>/dev/null)" ]; then \
+		echo "❌ No Allure results found. Run 'make test-allure' or 'make test-report' first."; \
+		exit 1; \
+	fi
+	@if command -v allure >/dev/null 2>&1; then \
+		allure serve reports/allure_results; \
+	else \
+		echo "❌ Allure CLI not installed."; \
+		echo "Install with: brew install allure (macOS)"; \
+		echo "Or download from: https://docs.qameta.io/allure/#_installing_a_commandline"; \
+		exit 1; \
+	fi
+
+allure-open:
+	@echo "Opening Allure report..."
+	@if [ -f "reports/allure_report/index.html" ]; then \
+		open reports/allure_report/index.html 2>/dev/null || xdg-open reports/allure_report/index.html 2>/dev/null || start reports/allure_report/index.html 2>/dev/null || echo "Please open reports/allure_report/index.html manually"; \
+	else \
+		echo "❌ Allure report not generated. Run 'make allure-report' first."; \
+	fi
+
+allure-clean:
+	@echo "Cleaning Allure results and reports..."
+	rm -rf reports/allure_results reports/allure_report 2>/dev/null || true
+	@echo "✅ Allure artifacts cleaned!"
 
 # Cleanup
 clean:
@@ -222,6 +290,7 @@ clean:
 clean-reports:
 	@echo "Cleaning up reports..."
 	rm -rf reports/*.html reports/screenshots/* reports/traces/* 2>/dev/null || true
+	rm -rf reports/allure_results reports/allure_report 2>/dev/null || true
 	@echo "✅ Reports cleaned!"
 
 clean-all: clean clean-reports

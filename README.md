@@ -1,7 +1,7 @@
 # Python Automation Testing Framework
 
 ## Overview
-A comprehensive test automation framework using **Playwright** with **pytest** and **pytest-bdd** for both traditional and BDD-style testing.
+A comprehensive test automation framework using **Playwright** with **Behave** for BDD-style testing with rich HTML and Allure reporting capabilities.
 
 ## Features
 
@@ -95,30 +95,31 @@ TEST_MFA_CODE=123456
 ### 3. Run Tests
 
 ```bash
-# Run all tests
-pytest -v
+# Run all tests with Behave
+behave
 
-# Run web tests
-pytest steps/web/ -v
+# Run tests with HTML report
+behave --format html --outfile reports/behave_report.html --format pretty
 
-# Run API tests
-./run_api_tests.sh
-# or
-pytest features/it_asset_inventory/test.feature -v
+# Run tests with Allure report
+behave --format allure_behave.formatter:AllureFormatter --outfile reports/allure_results --format pretty
 
-# Run BDD tests
-pytest steps/ -v
+# Run with specific tags
+behave --tags=@smoke
+behave --tags=@OV_03
 
-# Run traditional pytest tests
-pytest tests/ -v
+# Run specific tags with Allure report
+behave --tags=@smoke --format allure_behave.formatter:AllureFormatter --outfile reports/allure_results --format pretty
 
-# Run specific test file
-pytest steps/web/test_login_steps.py -v
+# Using Make commands (recommended)
+make test           # Run all tests
+make test-html      # Run with HTML report
+make test-allure    # Run with Allure report
+make test-report    # Run with both reports
 
-# Run with specific markers
-pytest -m smoke -v
-pytest -m it_asset_inventory -v
-pytest -m "web and smoke" -v
+# View generated reports
+make report         # Open HTML report
+make allure-serve   # Serve Allure report
 ```
 
 ## Testing Styles
@@ -322,43 +323,186 @@ HEADLESS=false pytest -m smoke -v
 
 ## Reporting
 
-### HTML Report
+This framework supports two powerful reporting formats:
+
+### Quick Start - Generate Reports
 
 ```bash
-# Generate HTML report
-pytest -v --html=reports/report.html --self-contained-html
+# Using Make commands (Recommended)
+make test-html      # HTML report
+make test-allure    # Allure report
+make test-report    # Both reports
 
-# Open report
-open reports/report.html  # macOS
-start reports/report.html # Windows
+# Using Behave directly
+behave --format allure_behave.formatter:AllureFormatter --outfile reports/allure_results --format pretty
+behave --tags=@OV_03 --format allure_behave.formatter:AllureFormatter --outfile reports/allure_results --format pretty
+
+# View reports
+make report         # Open HTML report
+make allure-serve   # Serve Allure interactively
+allure serve reports/allure_results  # Serve Allure directly
 ```
 
-Reports include:
-- Test results summary
-- Duration metrics
-- Screenshots on failure
-- Full test output
-
-### Allure Report
+### Using Python Test Runner
 
 ```bash
-# Generate Allure results
-pytest -v --alluredir=reports/allure_results
+# Run with HTML report
+python run_tests.py --html
 
-# Serve Allure report (interactive)
+# Run with Allure report
+python run_tests.py --allure
+
+# Run with both reports
+python run_tests.py --both
+
+# Run specific tags with reports
+python run_tests.py --tags @smoke --html
+python run_tests.py --tags @OV_03 --allure
+```
+
+### Using Behave Directly with Reports
+
+```bash
+# HTML report only
+behave --format html --outfile reports/behave_report.html --format pretty
+
+# Allure report only
+behave --format allure_behave.formatter:AllureFormatter --outfile reports/allure_results --format pretty
+
+# Both reports
+behave --format html --outfile reports/behave_report.html \
+       --format allure_behave.formatter:AllureFormatter --outfile reports/allure_results \
+       --format pretty
+
+# With specific tags
+behave --tags=@smoke --format allure_behave.formatter:AllureFormatter --outfile reports/allure_results --format pretty
+behave --tags=@High --format allure_behave.formatter:AllureFormatter --outfile reports/allure_results --format pretty
+
+# Exclude tags
+behave --tags=~@skip --format allure_behave.formatter:AllureFormatter --outfile reports/allure_results --format pretty
+
+# Multiple tags (AND)
+behave --tags=@SecurityPosture --tags=@High --format allure_behave.formatter:AllureFormatter --outfile reports/allure_results --format pretty
+```
+
+### HTML Report Features
+
+- ✅ Single, self-contained HTML file
+- ✅ Easy to share via email
+- ✅ No additional tools needed
+- ✅ Shows pass/fail status
+- ✅ Step details and timing
+- ✅ Error messages and tracebacks
+
+```bash
+# Generate and open HTML report
+make test-html
+make report
+```
+
+### Allure Report Features
+
+- ✅ Rich, interactive web interface
+- ✅ Test history and trends
+- ✅ Categories and severity
+- ✅ Screenshots attached on failure
+- ✅ Playwright traces attached
+- ✅ Timeline visualization
+- ✅ Detailed test analytics
+
+```bash
+# Generate Allure results (Make)
+make test-allure
+
+# Generate Allure results (Behave)
+behave --format allure_behave.formatter:AllureFormatter --outfile reports/allure_results --format pretty
+
+# Serve interactively (recommended)
+make allure-serve
+# or
 allure serve reports/allure_results
 
-# Generate static report
-allure generate reports/allure_results -o reports/allure_report --clean
+# Or generate static report
+make allure-report
+make allure-open
 ```
 
-### Screenshots on Failure
+### Common Test Execution Examples
 
-Automatically captured in `conftest.py`:
-- Saved to `reports/screenshots/`
-- Full page screenshots
-- Timestamped filenames
-- Attached to HTML reports
+```bash
+# Example 1: Run specific test scenario with Allure report
+behave --tags=@OV_03 --format allure_behave.formatter:AllureFormatter --outfile reports/allure_results --format pretty
+allure serve reports/allure_results
+
+# Example 2: Run smoke tests with HTML report
+behave --tags=@smoke --format html --outfile reports/behave_report.html --format pretty
+open reports/behave_report.html  # macOS
+
+# Example 3: Run high priority tests with both reports
+behave --tags=@High --format html --outfile reports/behave_report.html \
+       --format allure_behave.formatter:AllureFormatter --outfile reports/allure_results \
+       --format pretty
+
+# Example 4: Run Security Posture tests with Allure
+behave --tags=@SecurityPosture --format allure_behave.formatter:AllureFormatter --outfile reports/allure_results --format pretty
+
+# Example 5: Run all tests except skipped ones
+behave --tags=~@skip --format allure_behave.formatter:AllureFormatter --outfile reports/allure_results --format pretty
+
+# Example 6: Run specific feature file with Allure
+behave features/it_asset_inventory/overview.feature --format allure_behave.formatter:AllureFormatter --outfile reports/allure_results --format pretty
+```
+
+### Automatic Attachments on Failure
+
+The framework automatically captures and attaches:
+- 📸 **Full page screenshots** (PNG)
+- 📊 **Playwright traces** (ZIP) - viewable with `playwright show-trace`
+- 📝 **Page information** (URL, title, status)
+- 🖥️ **Console logs** (in debug mode)
+
+All artifacts are:
+- Saved to `reports/` directory
+- Attached to Allure reports automatically
+- Timestamped for easy identification
+
+### Report Locations
+
+```
+reports/
+├── behave_report.html        # HTML report
+├── allure_results/            # Allure raw results
+├── allure_report/             # Generated Allure report
+├── screenshots/               # Failure screenshots
+└── traces/                    # Playwright traces
+```
+
+### View Reports
+
+```bash
+# HTML Report
+make report                    # Opens HTML report in browser
+
+# Allure Report
+make allure-serve             # Serve interactively
+make allure-report            # Generate static report
+make allure-open              # Open generated report
+```
+
+### Clean Reports
+
+```bash
+make clean-reports            # Remove all reports
+make allure-clean             # Remove Allure artifacts only
+```
+
+📚 **For detailed reporting documentation, see:** [`docs/REPORTING_GUIDE.md`](docs/REPORTING_GUIDE.md)
+
+This includes:
+- Complete usage guide
+- CI/CD integration examples
+- Troubleshooting tips
+- Best practices
 
 ## Test Markers
 
@@ -507,18 +651,25 @@ playwright install chromium
 ## Documentation
 
 ### General
-- **README.md** (this file) - Project overview
-- **TEST_SUMMARY.md** - Overall test summary
+- **README.md** (this file) - Project overview and quick start
+- **BEHAVE_COMMANDS.md** - Behave commands quick reference
+- **docs/REPORTING_GUIDE.md** - Complete reporting documentation
+- **docs/REPORTING_WORKFLOW.md** - Reporting workflow diagrams
 
-### Web Testing
-- **LOGIN_TEST_GUIDE.md** - Detailed login testing guide
-- **pages/README.md** - Page Object Model guide (if exists)
+### Test Execution
+- **run_tests.py** - Python test runner with reporting options
+- **Makefile** - Make commands for test execution and reports
 
-### API Testing
-- **API_QUICK_START.md** - Quick start guide for API tests
-- **API_TEST_GUIDE.md** - Comprehensive API testing documentation
-- **API_TEST_IMPLEMENTATION_SUMMARY.md** - Implementation details
-- **examples/api_usage_example.py** - Working code examples
+### Configuration
+- **behave.ini** - Behave test runner configuration
+- **config/settings.py** - Environment and browser settings
+- **features/environment.py** - Test hooks and setup
+
+### Quick References
+- **BEHAVE_COMMANDS.md** - All Behave commands with examples
+- Common patterns and use cases
+- Tag-based execution examples
+- Report generation commands
 
 ## Best Practices
 
