@@ -129,10 +129,11 @@ jobs:
           echo "📊 Reports will be generated in: reports/"
           echo ""
           
+          # Run with multiple formatters - HTML first for priority
           behave --tags=${{ inputs.test_tag }} \
-                 --format html --outfile reports/behave_report.html \
-                 --format allure_behave.formatter:AllureFormatter --outfile reports/allure_results \
-                 --format pretty
+                 -f html -o reports/behave_report.html \
+                 -f allure_behave.formatter:AllureFormatter -o reports/allure_results \
+                 -f pretty
           
           TEST_EXIT_CODE=$?
           echo ""
@@ -144,6 +145,22 @@ jobs:
           echo ""
           echo "📂 Generated files:"
           ls -lh reports/ || echo "⚠️ No reports directory"
+          
+          # Verify HTML report was created
+          if [ -f "reports/behave_report.html" ]; then
+            SIZE=$(du -h reports/behave_report.html | cut -f1)
+            echo "✅ HTML report created: $SIZE"
+          else
+            echo "❌ WARNING: HTML report not found!"
+          fi
+          
+          # Verify Allure results were created
+          if [ -d "reports/allure_results" ] && [ "$(ls -A reports/allure_results)" ]; then
+            FILE_COUNT=$(ls reports/allure_results | wc -l)
+            echo "✅ Allure results created: $FILE_COUNT files"
+          else
+            echo "⚠️ WARNING: Allure results not found or empty"
+          fi
           
           if [ $TEST_EXIT_CODE -ne 0 ]; then
             echo ""
@@ -256,24 +273,6 @@ jobs:
         with:
           name: html-report-${{ inputs.test_tag }}-${{ github.run_number }}
           path: reports/behave_report.html
-          if-no-files-found: warn
-          retention-days: 30
-      
-      - name: Upload Allure results
-        if: inputs.generate_reports == true && always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: allure-results-${{ inputs.test_tag }}-${{ github.run_number }}
-          path: reports/allure_results/
-          if-no-files-found: warn
-          retention-days: 30
-      
-      - name: Upload Allure report
-        if: inputs.generate_reports == true && always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: allure-report-${{ inputs.test_tag }}-${{ github.run_number }}
-          path: reports/allure_report/
           if-no-files-found: warn
           retention-days: 30
       

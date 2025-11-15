@@ -87,14 +87,31 @@ jobs:
           echo "🏷️  Running $SUITE tests with tag: $TAG"
           
           if [ -z "$TAG" ]; then
-            behave --format html --outfile reports/behave_report.html \
-                   --format allure_behave.formatter:AllureFormatter --outfile reports/allure_results \
-                   --format pretty || true
+            behave -f html -o reports/behave_report.html \
+                   -f allure_behave.formatter:AllureFormatter -o reports/allure_results \
+                   -f pretty || true
           else
             behave --tags="$TAG" \
-                   --format html --outfile reports/behave_report.html \
-                   --format allure_behave.formatter:AllureFormatter --outfile reports/allure_results \
-                   --format pretty || true
+                   -f html -o reports/behave_report.html \
+                   -f allure_behave.formatter:AllureFormatter -o reports/allure_results \
+                   -f pretty || true
+          fi
+          
+          # Verify reports were created
+          echo ""
+          echo "📂 Generated reports:"
+          if [ -f "reports/behave_report.html" ]; then
+            SIZE=$(du -h reports/behave_report.html | cut -f1)
+            echo "✅ HTML report: $SIZE"
+          else
+            echo "❌ HTML report: NOT FOUND"
+          fi
+          
+          if [ -d "reports/allure_results" ] && [ "$(ls -A reports/allure_results)" ]; then
+            FILE_COUNT=$(ls reports/allure_results | wc -l)
+            echo "✅ Allure results: $FILE_COUNT files"
+          else
+            echo "⚠️ Allure results: EMPTY"
           fi
 
       - name: 📊 Install Allure CLI
