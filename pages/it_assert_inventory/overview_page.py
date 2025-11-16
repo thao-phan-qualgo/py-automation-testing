@@ -337,3 +337,24 @@ class OverviewPage(BasePage):
             return False
         except Exception:
             return False
+
+    def count_total_devices_count_displayed(self) -> int:
+        """Get the total devices count displayed on UI."""
+        try:
+            # Try to get from data-testid locator
+            total_locator = self.page.locator(self._get_locator("total_devices_count"))
+
+            if total_locator.count() > 0:
+                text = total_locator.first.inner_text()
+                # Extract number from text (e.g., "1,234" or "Total: 1,234 devices")
+                import re
+
+                numbers = re.findall(r"[\d,]+", text)
+                if numbers:
+                    # Remove commas and convert to int
+                    return int(numbers[0].replace(",", ""))
+
+            return 0
+        except Exception as e:
+            print(f"Error getting total devices count: {e}")
+            return 0
