@@ -34,3 +34,5 @@ test-results/
 playwright-report/
 traces/
 docs
+
+database/private_key

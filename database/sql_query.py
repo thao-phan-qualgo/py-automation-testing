@@ -372,46 +372,46 @@ GET_USERS_WITH_TOTAL_COUNT = """
 
 
 def build_search_pattern(search_term: str) -> str:
-	"""
-	Build a search pattern for ILIKE queries.
+    """
+    Build a search pattern for ILIKE queries.
 
-	Args:
-		search_term: The term to search for
+    Args:
+            search_term: The term to search for
 
-	Returns:
-		Search pattern with wildcards
+    Returns:
+            Search pattern with wildcards
 
-	Example:
-		>>> build_search_pattern("john")
-		'%john%'
-	"""
-	return f"%{search_term}%"
+    Example:
+            >>> build_search_pattern("john")
+            '%john%'
+    """
+    return f"%{search_term}%"
 
 
 def get_users_by_filter(filter_dict: dict) -> tuple:
-	"""
-	Build dynamic WHERE clause from filter dictionary.
+    """
+    Build dynamic WHERE clause from filter dictionary.
 
-	Args:
-		filter_dict: Dictionary of field: value filters
+    Args:
+            filter_dict: Dictionary of field: value filters
 
-	Returns:
-		Tuple of (query, params)
+    Returns:
+            Tuple of (query, params)
 
-	Example:
-		>>> filters = {'role': 'admin', 'is_active': True}
-		>>> query, params = get_users_by_filter(filters)
-	"""
-	base_query = "SELECT * FROM users WHERE "
-	conditions = []
-	params = []
+    Example:
+            >>> filters = {'role': 'admin', 'is_active': True}
+            >>> query, params = get_users_by_filter(filters)
+    """
+    base_query = "SELECT * FROM users WHERE "
+    conditions = []
+    params = []
 
-	for field, value in filter_dict.items():
-		conditions.append(f"{field} = %s")
-		params.append(value)
+    for field, value in filter_dict.items():
+        conditions.append(f"{field} = %s")
+        params.append(value)
 
-	query = base_query + " AND ".join(conditions) + " ORDER BY created_at DESC;"
-	return query, tuple(params)
+    query = base_query + " AND ".join(conditions) + " ORDER BY created_at DESC;"
+    return query, tuple(params)
 
 
 # ============================================================================

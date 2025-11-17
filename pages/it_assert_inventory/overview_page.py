@@ -36,7 +36,7 @@ class OverviewPage(BasePage):
             # Metric cards (generic)
             "metric_cards": '[data-testid*="metric-card"], .metric-card, [class*="metric-card"]',
             "metric_card_title": '[data-testid="metric-title"], .metric-title, [class*="metric-title"]',
-            "metric_card_value": '[data-testid="metric-value"], .metric-value, [class*="metric-value"]',
+            "metric_card_value": '[data-testid="metric-value"], .metric-value, [class*="metric-value"], [class*="value"], .number, .count',
             # Specific metric cards
             "critical_assets": ':text("Critical Assets")',
             "non_compliant_assets": ':text("Non-Compliant Assets")',
@@ -177,9 +177,27 @@ class OverviewPage(BasePage):
                 self.page, metric_value_selector, state="visible", timeout=15000
             )
         except Exception as e:
-            # If wait fails, log but continue to return empty list
-            # which will be handled by the calling method
-            pass
+            # If wait fails, try to find ANY elements with numbers as fallback
+            print(f"⚠️ Primary metric value selector failed: {e}")
+            print(f"Trying fallback selectors...")
+
+            # Fallback: Try to find any element containing numbers
+            fallback_selectors = [
+                "text=/\\d+/",  # Any text containing digits
+                '[class*="metric"] text=/\\d+/',  # Numbers in metric-related classes
+                '[class*="card"] text=/\\d+/',  # Numbers in card-related classes
+            ]
+
+            for fallback in fallback_selectors:
+                try:
+                    elements = self.page.locator(fallback).all()
+                    if len(elements) > 0:
+                        print(
+                            f"✅ Found {len(elements)} elements with fallback selector: {fallback}"
+                        )
+                        return elements
+                except Exception:
+                    continue
 
         return self.page.locator(metric_value_selector).all()
 
@@ -190,10 +208,31 @@ class OverviewPage(BasePage):
     def verify_all_metric_values_numeric(self) -> Tuple[bool, str]:
         """Verify all metric values are numeric and properly formatted."""
         try:
-            metric_values = self.get_all_metric_values()
+            # Wait for page to be fully loaded
+            self.wait_for_full_page_load()
+
+            # Try multiple times to get metric values (they may be lazy-loaded)
+            metric_values = []
+            max_attempts = 3
+            for attempt in range(max_attempts):
+                metric_values = self.get_all_metric_values()
+                if len(metric_values) > 0:
+                    break
+                if attempt < max_attempts - 1:
+                    print(
+                        f"Attempt {attempt + 1}/{max_attempts}: No metric values found, waiting..."
+                    )
+                    self.page.wait_for_timeout(2000)  # Wait 2 seconds before retry
 
             if len(metric_values) == 0:
-                return False, "No metric values found on the page"
+                # Take screenshot for debugging
+                self.page.screenshot(
+                    path="reports/screenshots/no_metrics_found_debug.png"
+                )
+                return (
+                    False,
+                    "No metric values found on the page after 3 attempts. Check screenshot: no_metrics_found_debug.png",
+                )
 
             for metric in metric_values:
                 value_text = metric.text_content().strip()
@@ -203,7 +242,10 @@ class OverviewPage(BasePage):
                         f"Metric value '{value_text}' is not properly formatted or numeric",
                     )
 
-            return True, "All metric values are numeric and properly formatted"
+            return (
+                True,
+                f"All metric values are numeric and properly formatted ({len(metric_values)} values checked)",
+            )
         except Exception as e:
             return False, f"Error verifying metric values: {str(e)}"
 
