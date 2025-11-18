@@ -1,6 +1,7 @@
 # Python Automation Testing Framework
 
 ## Overview
+
 A comprehensive test automation framework using **Playwright** with **Behave** for BDD-style testing with rich HTML and Allure reporting capabilities.
 
 ## Features
@@ -14,7 +15,7 @@ A comprehensive test automation framework using **Playwright** with **Behave** f
 ✅ **Multi-Platform** - Windows, macOS, Linux  
 ✅ **Parallel Execution** - Run tests concurrently  
 ✅ **Rich Reporting** - HTML, Allure reports with screenshots  
-✅ **Microsoft SSO Support** - Automated login with MFA handling  
+✅ **Microsoft SSO Support** - Automated login with MFA handling
 
 ## Project Structure
 
@@ -127,6 +128,7 @@ make allure-serve   # Serve Allure report
 ### API Testing
 
 **Feature File** (`features/api/test.feature`):
+
 ```gherkin
 Feature: Keycloak Authentication API
 
@@ -147,14 +149,16 @@ Feature: Keycloak Authentication API
 ```
 
 **Run API Tests**:
+
 ```bash
 # Or using pytest directly
-pytest features/it_asset_inventory/test.feature -v
+pytest features/web/test.feature -v
 ```
 
 ### BDD Style (Behavior Driven Development)
 
 **Feature File** (`features/web/login.feature`):
+
 ```gherkin
 Feature: User Login
 
@@ -168,6 +172,7 @@ Feature: User Login
 ```
 
 **Step Definition** (`steps/web/test_login_steps.py`):
+
 ```python
 @given("I am on the sign-in page")
 def navigate_to_sign_in(login_page):
@@ -179,13 +184,15 @@ def click_sso(login_page):
 ```
 
 **Run BDD Tests**:
+
 ```bash
-pytest steps/web/test_login_steps.py -v
+pytest steps/common/test_login_steps.py -v
 ```
 
 ### Traditional pytest Style
 
 **Test File** (`tests/web/test_login.py`):
+
 ```python
 def test_successful_login(login_page, test_credentials):
     login_page.goto_sign_in()
@@ -198,8 +205,9 @@ def test_successful_login(login_page, test_credentials):
 ```
 
 **Run pytest Tests**:
+
 ```bash
-pytest tests/web/test_login.py -v
+pytest tests/common/test_login.py -v
 ```
 
 ## Page Object Model
@@ -227,6 +235,7 @@ class MyPage(BasePage):
 ### Available Page Objects
 
 #### HomePage
+
 ```python
 home = HomePage(page, base_url)
 home.goto()              # Navigate with auto-wait
@@ -235,6 +244,7 @@ title = home.get_title() # Get page title
 ```
 
 #### LoginPage
+
 ```python
 login = LoginPage(page, base_url)
 login.goto_sign_in()
@@ -267,7 +277,7 @@ pytest -m smoke -v
 pytest -m regression -v
 
 # Web tests
-pytest -m web -v
+pytest -m common -v
 
 # Login tests
 pytest -m login -v
@@ -280,23 +290,23 @@ pytest -m "web and smoke" -v
 
 ```bash
 # Specific BDD test
-pytest steps/web/test_login_steps.py -v -k "Successful login"
+pytest steps/common/test_login_steps.py -v -k "Successful login"
 
 # Specific pytest test
-pytest tests/web/test_login.py::TestLogin::test_successful_login_with_mfa -v
+pytest tests/common/test_login.py::TestLogin::test_successful_login_with_mfa -v
 ```
 
 ### Multi-Browser Execution
 
 ```bash
 # Firefox
-BROWSER=firefox pytest -m web -v
+BROWSER=firefox pytest -m common -v
 
 # WebKit (Safari)
-BROWSER=webkit pytest -m web -v
+BROWSER=webkit pytest -m common -v
 
 # Chromium (default)
-BROWSER=chromium pytest -m web -v
+BROWSER=chromium pytest -m common -v
 ```
 
 ### Parallel Execution
@@ -305,10 +315,10 @@ Run tests in parallel using pytest-xdist:
 
 ```bash
 # Run with 4 workers
-pytest -m web -n 4 -v
+pytest -m common -n 4 -v
 
 # Run with auto-detection
-pytest -m web -n auto -v
+pytest -m common -n auto -v
 ```
 
 ### Headed Mode (See Browser)
@@ -450,18 +460,20 @@ behave --tags=@SecurityPosture --format allure_behave.formatter:AllureFormatter 
 behave --tags=~@skip --format allure_behave.formatter:AllureFormatter --outfile reports/allure_results --format pretty
 
 # Example 6: Run specific feature file with Allure
-behave features/it_asset_inventory/overview.feature --format allure_behave.formatter:AllureFormatter --outfile reports/allure_results --format pretty
+behave features/web/overview.feature --format allure_behave.formatter:AllureFormatter --outfile reports/allure_results --format pretty
 ```
 
 ### Automatic Attachments on Failure
 
 The framework automatically captures and attaches:
+
 - 📸 **Full page screenshots** (PNG)
 - 📊 **Playwright traces** (ZIP) - viewable with `playwright show-trace`
 - 📝 **Page information** (URL, title, status)
 - 🖥️ **Console logs** (in debug mode)
 
 All artifacts are:
+
 - Saved to `reports/` directory
 - Attached to Allure reports automatically
 - Timestamped for easy identification
@@ -499,6 +511,7 @@ make allure-clean             # Remove Allure artifacts only
 📚 **For detailed reporting documentation, see:** [`docs/REPORTING_GUIDE.md`](docs/REPORTING_GUIDE.md)
 
 This includes:
+
 - Complete usage guide
 - CI/CD integration examples
 - Troubleshooting tips
@@ -533,6 +546,7 @@ def test_detailed_check():
 ```
 
 Run specific markers:
+
 ```bash
 pytest -m smoke -v
 ```
@@ -540,11 +554,13 @@ pytest -m smoke -v
 ## Environment Variables
 
 ### Required
+
 ```bash
 PORTAL_BASE_URL=https://your-app-url.com
 ```
 
 ### Optional
+
 ```bash
 BROWSER=chromium          # chromium, firefox, webkit
 HEADLESS=true            # true, false
@@ -558,6 +574,7 @@ TEST_MFA_CODE=123456
 ### No Manual Waits Needed!
 
 ❌ **Old Way** (manual waits):
+
 ```python
 page.click("button")
 page.wait_for_load_state("networkidle")
@@ -565,6 +582,7 @@ page.wait_for_selector("#element")
 ```
 
 ✅ **New Way** (automatic):
+
 ```python
 page_object.click_and_wait("button")  # Waits automatically!
 ```
@@ -581,7 +599,7 @@ page_object.click_and_wait("button")  # Waits automatically!
 ✅ Less flaky tests  
 ✅ Cleaner code  
 ✅ Consistent behavior  
-✅ No forgotten waits  
+✅ No forgotten waits
 
 ## CI/CD Integration
 
@@ -626,23 +644,27 @@ jobs:
 ## Troubleshooting
 
 ### Tests Failing with "Element not found"
+
 - Check if page loaded completely
 - Verify locator is correct
 - Increase timeout if needed
 - Run in headed mode to debug: `HEADLESS=false`
 
 ### MFA Code Issues
+
 - MFA codes expire quickly (30-60 seconds)
 - Use test account without MFA
 - Or integrate with authenticator API (pyotp)
 - See `LOGIN_TEST_GUIDE.md` for details
 
 ### Permission Errors with .env
+
 - Ensure `.env` file has read permissions
 - Check file is in project root
 - Verify not ignored by .gitignore
 
 ### Browser Not Found
+
 ```bash
 # Reinstall browsers
 playwright install chromium
@@ -651,21 +673,25 @@ playwright install chromium
 ## Documentation
 
 ### General
+
 - **README.md** (this file) - Project overview and quick start
 - **BEHAVE_COMMANDS.md** - Behave commands quick reference
 - **docs/REPORTING_GUIDE.md** - Complete reporting documentation
 - **docs/REPORTING_WORKFLOW.md** - Reporting workflow diagrams
 
 ### Test Execution
+
 - **run_tests.py** - Python test runner with reporting options
 - **Makefile** - Make commands for test execution and reports
 
 ### Configuration
+
 - **behave.ini** - Behave test runner configuration
 - **config/settings.py** - Environment and browser settings
 - **features/environment.py** - Test hooks and setup
 
 ### Quick References
+
 - **BEHAVE_COMMANDS.md** - All Behave commands with examples
 - Common patterns and use cases
 - Tag-based execution examples
@@ -674,24 +700,29 @@ playwright install chromium
 ## Best Practices
 
 ### 1. Use Page Objects
+
 ✅ Encapsulate page logic in page objects  
-✅ Keep tests clean and readable  
+✅ Keep tests clean and readable
 
 ### 2. Use Automatic Waits
+
 ✅ Leverage BasePage methods  
-✅ No manual waits in tests  
+✅ No manual waits in tests
 
 ### 3. Use Descriptive Names
+
 ✅ Clear test names  
-✅ Meaningful assertions  
+✅ Meaningful assertions
 
 ### 4. Separate Concerns
+
 ✅ BDD for business-readable tests  
-✅ pytest for technical tests  
+✅ pytest for technical tests
 
 ### 5. Use Fixtures
+
 ✅ Reusable setup/teardown  
-✅ Centralized test data  
+✅ Centralized test data
 
 ## Contributing
 
@@ -703,6 +734,7 @@ playwright install chromium
 ## Support
 
 For questions or issues:
+
 1. Check documentation files
 2. Review example tests
 3. Check conftest.py for fixtures
